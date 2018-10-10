@@ -1,3 +1,15 @@
+const tf = require('@tensorflow/tfjs');
+require('@tensorflow/tfjs-node');
+
+//const string for parsing the board state returned by chess.js
+const PAWN =  'p'
+const ROOK = 'r'
+const KNIGHT = 'n'
+const BISHOP ='b'
+const QUEEN = 'q'
+const KING = 'k'
+
+
 //Const arrays for assembling the board state                        
 const PAWN_PLAYER_ARR      = [1,0,0,0,0,0,0,0,0,0,0,0]
 const ROOK_PLAYER_ARR      = [0,1,0,0,0,0,0,0,0,0,0,0]
@@ -98,7 +110,8 @@ exports.toInput = function(boardArray, color){
             
         }
     }
-
+    
+    tensor = tf.tensor([1])
 
     return tf.tensor4d([input]);
 }
@@ -107,53 +120,187 @@ exports.toInput = function(boardArray, color){
 // uses list of legal moves created by engine to set all illegal moves to zero, this will be used by the 
 // when training the model to teach it to avoid making illegal moves and also to only consider
 // legal moves when choosing the highes Q value
-exports.legalise = function(modelOutput, legalMoves){
+exports.legalise = async function(modelOutput, legalMoves){
     movesLength = legalMoves.length
 
     //Makes a mask with ones for the legal moves
-    maskLegalMoves = tf.buffer([8,8,73]); 
+    maskLegalMoves = tf.buffer([1,8,8,73]); 
 
     //fill out the buffer with the indices of legal moves
     for(i=0; i<movesLength; i++){
         index = moveToIndex(legalMoves[i])
-        await maskLegalMoves.set(1, index.X, index.Y, index.Z)
+        await maskLegalMoves.set(1, 0, index.X, index.Y, index.Z)
     }
+    maskLegalMoves = await maskLegalMoves.toTensor()
 
     //make a legal moves tensor out of multiplication of model output and mask
-    legalisedMoves = await tf.mul(modelOutput, maskLegalMoves)
+    legalisedMoves = await tf.mul(maskLegalMoves, modelOutput)
 
     return legalisedMoves
 }
 
 
 // finds the index of Highest Q value in the Output array
-exports.findQindex = function(inputTensor){
-    
+exports.findQindex = async function(inputTensor){
 
-    return maxIndex;
+    // var reducedTables = {
+    //                     T1: await tf.max(inputTensor),
+    //                     T2: await tf.max(this.T1),
+    //                     T3: await tf.max(this.T2),
+    //                     T4: await tf.max(this.T3)
+    // }
+    T1 = await inputTensor.max(0),
+    T2 = await T1.max(0),
+    T3 = await T2.max(0),
+    T4 = await T3.max(0),
+
+    I1 = await inputTensor.argMax(0)
+    I2 = await T1.argMax(0);
+    I3 = await T2.argMax(0);
+    I4 = await T3.argMax(0)
+
+    index = []
+    runIndex = (await I4.data())[0]
+    index.unshift(runIndex)
+
+    runIndex = (await I3.data())[runIndex]
+    index.unshift(runIndex)
+    
+    runIndex = (await I2.data())[runIndex]
+    index.unshift(runIndex)
+    
+    runIndex = (await I1.data())[runIndex]
+    index.unshift(runIndex)
+
+    // reducedTables.T1 = await tf.max(inputTensor)
+    // reducedTables.T2 = await tf.max(reducedTables.T1)
+    // reducedTables.T2 = await tf.max(reducedTables.T1)
+
+    // reducedIndices.I1 = await tf.argMax(inputTensor);
+    // reducedIndices.T2 = await tf.argMax(reducedTables.T1)
+    // reducedIndices.T2 = await tf.argMax(reducedTables.T1)
+    // reducedIndices.T2 = await tf.argMax(reducedTables.T1)
+    // for(rows = 0; rows<8; rows++){
+    //     for(columns = 0; columns<8; columns++){
+    //         temp = (await reducedIndices.I1.slice([0,rows,columns],[1,1,1]).data())
+    //         reducedTables.T1[rows][columns] = (await inputTensor.slice([0,rows,columns,temp],[1,1,1]).data())[0]           
+    //     }
+    // }
+
+
+
+    return index;
 }
 
 exports.indexToMove = function(index, color){
+    var toX = 0;
+    var toY = 0;
+    var indexZ = index.Z
+    var indexX = index.X // count X from the bottom starting with one
+    var from = ''+(index.y)+String.fromCharCode(97 + index.Y);
+    if(index.Z<56){
+        //All possible queen moves, covers everything except Knight moves and pawn promotions
 
+        if(indexZ<7){//Vertical UP
+            toX= indexX + indexZ + 1; //Moves up on board
+            toY= index.Y;             //stays same on horizontal
+        }else
+        if(index.Z<14){//Vertial DOWN
+            indexZ = indexZ-7;
+            toX= indexX - indexZ - 1; //Moves left on board
+            toY= index.Y;             //stays same on horizontal
+        }else
+        if(index.Z<21){//Horizontal RIGHT
+            indexZ = indexZ- 14;
+            toX= indexX                //stays same on vertical
+            toY= index.Y + indexZ + 1; //Moves right on horiontal
+        }else
+        if(index.Z<28){//Horizontal LEFT
+            indexZ = 21;
+            toX= indexX                //stays same on vertical
+            toY= index.Y - indexZ - 1; //Moves left on horiontal
+        }else
+        if(index.Z<35){//Diagonal NE
+            indexZ =indexZ- 28;
+            toX= indexX + indexZ + 1; //Moves up on vertical
+            toY= index.Y + indexZ + 1; //moves right on horizontal
+        }else
+        if(index.Z<42){//Diagonal SW
+            indexZ =indexZ- 35; 
+            toX= indexX - indexZ - 1; //Moves down on vertical
+            toY= index.Y - indexZ - 1; //moves left on horizontal
+        }else
+        if(index.Z<49){//Diagonal NW
+            indexZ =indexZ- 42;
+            toX= indexX + indexZ + 1; //moves up on vertical 
+            toY= index.Y - indexZ - 1; //moves left on horizontal
+        }else
+        if(index.Z<56){// Diagonal SE
+            indexZ =indexZ- 49;
+            toX= indexX - indexZ - 1; //moves down on vertical
+            toY= index.Y + indexZ + 1; //moves right on horiontal
+        }
+    }else{
+        //Covers all possible Knight moves 
+        switch(index.Z){
+            case 56: //moves 2 up 1 right
+                toX = indexX + 2
+                toY = index.Y + 1
+            case 57: //moves 2 up 1 left
+                toX = indexX + 2
+                toY = index.Y - 1
+            case 58: //moves 2 down 1 right
+                toX = indexX - 2
+                toY = index.Y + 1
+            case 59: //moves 2 down 1 left
+                toX = indexX - 2
+                toY = index.Y - 1
+            case 60: //moves 2 right 1 up
+                toX = indexX + 1
+                toY = index.Y + 2
+            case 61: //moves 2 right 1 down
+                toX = indexX - 1
+                toY = index.Y + 2
+            case 62: //moves 2 left 1 up
+                toX = indexX + 1
+                toY = index.Y - 2
+            case 63: //moves 2 left 1 down
+                toX = indexX - 1
+                toY = index.Y - 2
 
-    return move;
+            //Covers all Pawn promotions
+            //To be made    
+            // case 65:
+            // case 66:
+            // case 67:
+            // case 68:
+            // case 69:
+            // case 70:
+            // case 71:
+            // case 72:
+        }
+    }
+    var to = ''+toX+String.fromCharCode(97 + toY);
+    console.log({from: from, to: to})
+    return {from: from, to: to}
 }
 
 moveToIndex = function(move){
-    from = ParsePositionIndex(moves[i].from)
-    to = ParsePositionIndex(moves[i].to)
-
+    from = parsePosition(move.from)
+    to = parsePosition(move.to)
+    index = {}
     index.X = from.X
     index.Y = from.Y
-    index.Z = 112 - 15 * (to.Y- from.Y) + (to.X - from.X) 
+    index.Z = RAYS[112 - 15 * (to.Y- from.Y) + (to.X - from.X)] 
+    
     return index
 }
 
 parsePosition = function(position){
-    var index
+    var index = {}
     var temp
     index.X = (position.slice(0).charCodeAt(0) - 97);
     temp = position.slice(1)
-    index.Y = 8 - parseInt(position.slice(1))
-    return position
+    index.Y = parseInt(position.slice(1))
+    return index
 }
