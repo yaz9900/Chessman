@@ -68,28 +68,83 @@ const RAYS = [
 //the figures that model uses.
 
 
-exports.toInput = function(boardArray, color){
+exports.toInput = async function(boardArray, color){
     //define the board building rules based on color of the player
     if(color === 'w'){
         player = 'w'
         opponent = 'b'
-        top = 8
+        top = 7
         bottom = 0
     }else{
         player = 'b'
         opponent = 'w'
         top = 0
-        bottom = 8
+        bottom = 7
     }
 
 
     var input = []
+    // if(color==='w'){
+    //     for(a=0; a<8; a++){
 
+    //         input[a] =[];
+    //         for(b=0; b<8; b++){
+    //             var boardCell = boardArray[a][b]
+    //             if(boardCell === null){
+    //                 input[a][b] = EMPTY
+    //             }else if(boardCell.color === player){
+    //                 if(boardCell.type == PAWN){input[a][b] = PAWN_PLAYER_ARR}
+    //                 if(boardCell.type == ROOK){input[a][b] = ROOK_PLAYER_ARR}
+    //                 if(boardCell.type == KNIGHT){input[a][b] = KNIGHT_PLAYER_ARR}
+    //                 if(boardCell.type == BISHOP){input[a][b] = BISHOP_PLAYER_ARR}
+    //                 if(boardCell.type == QUEEN){input[a][b] = QUEEN_PLAYER_ARR}
+    //                 if(boardCell.type == KING){input[a][b] = KING_PLAYER_ARR}
+    //             }else if(boardCell.color === opponent){
+    //                 if(boardCell.type === PAWN){input[a][b] = PAWN_OPPONENT_ARR}
+    //                 if(boardCell.type === ROOK){input[a][b] = ROOK_OPPONENT_ARR}
+    //                 if(boardCell.type === KNIGHT){input[a][b] = KNIGHT_OPPONENT_ARR}
+    //                 if(boardCell.type === BISHOP){input[a][b] = BISHOP_OPPONENT_ARR}
+    //                 if(boardCell.type === QUEEN){input[a][b] = QUEEN_OPPONENT_ARR}
+    //                 if(boardCell.type === KING){input[a][b] = KING_OPPONENT_ARR}
+    //             }
+                
+    //         }
+    
+    //     }
+    // }else{
+    //     for(a=7; a>-1; a--){
 
-    for(a=top; a<bottom; a++){
+    //         input[a] =[];
+    //         for(b=0; b<8; b++){
+    //             var boardCell = boardArray[a][b]
+    //             if(boardCell === null){
+    //                 input[a][b] = EMPTY
+    //             }else if(boardCell.color === player){
+    //                 if(boardCell.type == PAWN){input[a][b] = PAWN_PLAYER_ARR}
+    //                 if(boardCell.type == ROOK){input[a][b] = ROOK_PLAYER_ARR}
+    //                 if(boardCell.type == KNIGHT){input[a][b] = KNIGHT_PLAYER_ARR}
+    //                 if(boardCell.type == BISHOP){input[a][b] = BISHOP_PLAYER_ARR}
+    //                 if(boardCell.type == QUEEN){input[a][b] = QUEEN_PLAYER_ARR}
+    //                 if(boardCell.type == KING){input[a][b] = KING_PLAYER_ARR}
+    //             }else if(boardCell.color === opponent){
+    //                 if(boardCell.type === PAWN){input[a][b] = PAWN_OPPONENT_ARR}
+    //                 if(boardCell.type === ROOK){input[a][b] = ROOK_OPPONENT_ARR}
+    //                 if(boardCell.type === KNIGHT){input[a][b] = KNIGHT_OPPONENT_ARR}
+    //                 if(boardCell.type === BISHOP){input[a][b] = BISHOP_OPPONENT_ARR}
+    //                 if(boardCell.type === QUEEN){input[a][b] = QUEEN_OPPONENT_ARR}
+    //                 if(boardCell.type === KING){input[a][b] = KING_OPPONENT_ARR}
+    //             }
+                
+    //         }
+    
+    //     }
+    // }
+
+    for(a=0; a<8; a++){
+
         input[a] =[];
         for(b=0; b<8; b++){
-            var boardCell = board[a][b]
+            var boardCell = boardArray[a][b]
             if(boardCell === null){
                 input[a][b] = EMPTY
             }else if(boardCell.color === player){
@@ -109,9 +164,10 @@ exports.toInput = function(boardArray, color){
             }
             
         }
+
     }
     
-    tensor = tf.tensor([1])
+
 
     return tf.tensor4d([input]);
 }
@@ -159,18 +215,37 @@ exports.findQindex = async function(inputTensor){
     I3 = await T2.argMax(0);
     I4 = await T3.argMax(0)
 
-    index = []
-    runIndex = (await I4.data())[0]
-    index.unshift(runIndex)
 
-    runIndex = (await I3.data())[runIndex]
-    index.unshift(runIndex)
+
+
+
+
+    data4 = await I4.data()
+    index4 = data4[0]
+    data3 = await I3.slice([index4], [1])
+    index3 = (await data3.data())[0]
+    data2 = await I2.slice([index3, index4], [1,1])
+    index2 = (await data2.data())[0]
+    data1 = await I1.slice([index2, index3, index4], [1,1,1])
+    index1 = (await data1.data())[0]
+     
+    index[0] = index1
+    index[1] = index2
+    index[2] = index3
+    index[3] = index4
+
+    // index = []
+    // runIndex = (await I4.data())[0]
+    // index.unshift(runIndex)
+
+    // runIndex = (await I3.data())[runIndex]
+    // index.unshift(runIndex)
     
-    runIndex = (await I2.data())[runIndex]
-    index.unshift(runIndex)
+    // runIndex = (await I2.data())[runIndex]
+    // index.unshift(runIndex)
     
-    runIndex = (await I1.data())[runIndex]
-    index.unshift(runIndex)
+    // runIndex = (await I1.data())[runIndex]
+    // index.unshift(runIndex)
 
     // reducedTables.T1 = await tf.max(inputTensor)
     // reducedTables.T2 = await tf.max(reducedTables.T1)
@@ -195,78 +270,88 @@ exports.findQindex = async function(inputTensor){
 exports.indexToMove = function(index, color){
     var toX = 0;
     var toY = 0;
-    var indexZ = index.Z
-    var indexX = index.X // count X from the bottom starting with one
-    var from = ''+(index.y)+String.fromCharCode(97 + index.Y);
-    if(index.Z<56){
+    var Y = index[1]
+    var X = index[2]
+    var Z = index[3]
+
+
+    if(Z<56){
         //All possible queen moves, covers everything except Knight moves and pawn promotions
 
-        if(indexZ<7){//Vertical UP
-            toX= indexX + indexZ + 1; //Moves up on board
-            toY= index.Y;             //stays same on horizontal
+        if(Z<7){//Vertical UP
+            toX= X + Z + 1; //Moves up on board
+            toY= Y;             //stays same on horizontal
         }else
-        if(index.Z<14){//Vertial DOWN
-            indexZ = indexZ-7;
-            toX= indexX - indexZ - 1; //Moves left on board
-            toY= index.Y;             //stays same on horizontal
+        if(Z<14){//Vertial DOWN
+            Z = Z-7;
+            toX= X - Z - 1; //Moves left on board
+            toY= Y;             //stays same on horizontal
         }else
-        if(index.Z<21){//Horizontal RIGHT
-            indexZ = indexZ- 14;
-            toX= indexX                //stays same on vertical
-            toY= index.Y + indexZ + 1; //Moves right on horiontal
+        if(Z<21){//Horizontal RIGHT
+            Z = Z- 14;
+            toX= X                //stays same on vertical
+            toY= Y + Z + 1; //Moves right on horiontal
         }else
-        if(index.Z<28){//Horizontal LEFT
-            indexZ = 21;
-            toX= indexX                //stays same on vertical
-            toY= index.Y - indexZ - 1; //Moves left on horiontal
+        if(Z<28){//Horizontal LEFT
+            Z = Z - 21;
+            toX= X                //stays same on vertical
+            toY= Y - Z - 1; //Moves left on horiontal
         }else
-        if(index.Z<35){//Diagonal NE
-            indexZ =indexZ- 28;
-            toX= indexX + indexZ + 1; //Moves up on vertical
-            toY= index.Y + indexZ + 1; //moves right on horizontal
+        if(Z<35){//Diagonal NE
+            Z =Z- 28;
+            toX= X + Z + 1; //Moves up on vertical
+            toY= Y + Z + 1; //moves right on horizontal
         }else
-        if(index.Z<42){//Diagonal SW
-            indexZ =indexZ- 35; 
-            toX= indexX - indexZ - 1; //Moves down on vertical
-            toY= index.Y - indexZ - 1; //moves left on horizontal
+        if(Z<42){//Diagonal SW
+            Z = Z- 35; 
+            toX= X - Z - 1; //Moves down on vertical
+            toY= Y - Z - 1; //moves left on horizontal
         }else
-        if(index.Z<49){//Diagonal NW
-            indexZ =indexZ- 42;
-            toX= indexX + indexZ + 1; //moves up on vertical 
-            toY= index.Y - indexZ - 1; //moves left on horizontal
+        if(Z<49){//Diagonal NW
+            Z =Z- 42;
+            toX= X + Z + 1; //moves up on vertical 
+            toY= Y - Z - 1; //moves left on horizontal
         }else
-        if(index.Z<56){// Diagonal SE
-            indexZ =indexZ- 49;
-            toX= indexX - indexZ - 1; //moves down on vertical
-            toY= index.Y + indexZ + 1; //moves right on horiontal
+        if(Z<56){// Diagonal SE
+            Z = Z- 49;
+            toX= X - Z - 1; //moves down on vertical
+            toY= Y + Z + 1; //moves right on horiontal
         }
     }else{
         //Covers all possible Knight moves 
-        switch(index.Z){
+        switch(Z){
             case 56: //moves 2 up 1 right
-                toX = indexX + 2
-                toY = index.Y + 1
+                toX = X + 2
+                toY = Y + 1
+                break
             case 57: //moves 2 up 1 left
-                toX = indexX + 2
-                toY = index.Y - 1
+                toX = X + 2
+                toY = Y - 1
+                break
             case 58: //moves 2 down 1 right
-                toX = indexX - 2
-                toY = index.Y + 1
+                toX = X - 2
+                toY = Y + 1
+                break
             case 59: //moves 2 down 1 left
-                toX = indexX - 2
-                toY = index.Y - 1
+                toX = X - 2
+                toY = Y - 1
+                break
             case 60: //moves 2 right 1 up
-                toX = indexX + 1
-                toY = index.Y + 2
+                toX = X + 1
+                toY = Y + 2
+                break
             case 61: //moves 2 right 1 down
-                toX = indexX - 1
-                toY = index.Y + 2
+                toX = X - 1
+                toY = Y + 2
+                break
             case 62: //moves 2 left 1 up
-                toX = indexX + 1
-                toY = index.Y - 2
+                toX = X + 1
+                toY = Y - 2
+                break
             case 63: //moves 2 left 1 down
-                toX = indexX - 1
-                toY = index.Y - 2
+                toX = X - 1
+                toY = Y - 2
+                break
 
             //Covers all Pawn promotions
             //To be made    
@@ -280,8 +365,17 @@ exports.indexToMove = function(index, color){
             // case 72:
         }
     }
-    var to = ''+toX+String.fromCharCode(97 + toY);
-    console.log({from: from, to: to})
+
+
+    if(color == "w"){
+        var to = ''+String.fromCharCode(97 + toY)+(toX+1);
+        var from = ''+String.fromCharCode(97 + Y)+(X+1);
+    }else{
+        var to = ''+String.fromCharCode(97 + (7-toY))+((7-toX)+1);
+        var from = ''+String.fromCharCode(97 + (7-Y))+((7-X)+1);
+    }
+    // var to = ''+String.fromCharCode(97 + toY)+(toX+1);
+    // var from = ''+String.fromCharCode(97 + Y)+(X+1);
     return {from: from, to: to}
 }
 
@@ -289,9 +383,24 @@ moveToIndex = function(move){
     from = parsePosition(move.from)
     to = parsePosition(move.to)
     index = {}
-    index.X = from.X
-    index.Y = from.Y
-    index.Z = RAYS[112 - 15 * (to.Y- from.Y) + (to.X - from.X)] 
+
+    //I have to parse the moves based on the color of the figures model plays with.
+    //As the model doesnt know the color of the pictures on the board
+    //I have to change the move parsing mechanics based on the current color
+    //I "flip" the move's idices and location when I color is black  and flip it back in
+    // a parse move function 
+    if(move.color == 'w'){
+        index.X = from.X 
+        index.Y = from.Y - 1
+        index.Z = RAYS[112 - 15 * (to.Y- from.Y) + (to.X - from.X)] 
+    }else{
+        index.X = 7-from.X
+        index.Y = 8-from.Y 
+        index.Z = RAYS[112 - 15 * ((8-to.Y)- (8-from.Y)) + ((8-to.X) -(8- from.X))] 
+    }
+    // index.X = from.X
+    // index.Y = from.Y -1
+    // index.Z = RAYS[112 - 15 * (to.Y- from.Y) + (to.X - from.X)] 
     
     return index
 }

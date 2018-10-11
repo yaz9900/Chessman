@@ -19,8 +19,8 @@ PlayGame = async function(){
             //take turn
     while(memory.length<100){
         board = chess.board() //get board
-        color = chess.turn //get color of the figures moving this turn, b = black, w = white
-        modelInput = utils.toInput(board, color) //convert board to a standart model input
+        color = chess.turn() //get color of the figures moving this turn, b = black, w = white
+        modelInput = await utils.toInput(board, color) //convert board to a standart model input
         modelOutput = await model.predict(modelInput) //get model output
         legalMoves = chess.moves({verbose: true}) //get all legal moves
         legalOutput = await utils.legalise(modelOutput, legalMoves) //zero all illegal moves in model output
@@ -33,7 +33,7 @@ PlayGame = async function(){
                                 output: legalOutput,
                                 index: moveIndex
                             } //store turn information in game memory
-
+        console.log(chess.ascii())
 
         if(chess.game_over()){
 
