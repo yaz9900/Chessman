@@ -274,7 +274,7 @@ exports.indexToMove = function(index, color){
     var X = index[2]
     var Z = index[3]
 
-
+    promotion = undefined;
     if(Z<56){
         //All possible queen moves, covers everything except Knight moves and pawn promotions
 
@@ -354,13 +354,37 @@ exports.indexToMove = function(index, color){
                 break
 
             //Covers all Pawn promotions
-            //To be made    
-            // case 65:
-            // case 66:
-            // case 67:
-            // case 68:
-            // case 69:
-            // case 70:
+            
+            case 65: //move up, promote to queen
+                toX = X + 1
+                toY = Y
+                promotion = 'q'
+                break
+            case 66: //move up promote to knight
+                toX = X + 1
+                toY = Y
+                promotion = 'n'
+                break 
+            case 67: //move diagonal right, promote to queen
+                toX = X + 1
+                toY = Y + 1
+                promotion = 'q'
+                break
+            case 68: //move diagonal right, promote to knight
+                toX = X + 1
+                toY = Y + 1
+                promotion = 'n'
+                break
+            case 69: //move diagonal left, promote to queen
+                toX = X + 1
+                toY = Y - 1
+                promotion = 'q'
+                break
+            case 70: //move diagonal left, promote to knight
+                toX = X + 1
+                toY = Y - 1
+                promotion = 'n'
+                break
             // case 71:
             // case 72:
         }
@@ -376,19 +400,27 @@ exports.indexToMove = function(index, color){
     }
     // var to = ''+String.fromCharCode(97 + toY)+(toX+1);
     // var from = ''+String.fromCharCode(97 + Y)+(X+1);
-    return {from: from, to: to}
+    if(promotion){
+        return {from: from, to: to, promotion: promotion}
+    }else{
+        return {from: from, to: to}
+    }
+
 }
 
 moveToIndex = function(move){
     from = parsePosition(move.from)
     to = parsePosition(move.to)
     index = {}
-
     //I have to parse the moves based on the color of the figures model plays with.
     //As the model doesnt know the color of the pictures on the board
     //I have to change the move parsing mechanics based on the current color
     //I "flip" the move's idices and location when I color is black  and flip it back in
     // a parse move function 
+    
+
+        
+    
     if(move.color == 'w'){
         index.X = from.X 
         index.Y = from.Y - 1
@@ -397,6 +429,40 @@ moveToIndex = function(move){
         index.X = 7-from.X
         index.Y = 8-from.Y 
         index.Z = RAYS[112 - 15 * ((8-to.Y)- (8-from.Y)) + ((8-to.X) -(8- from.X))] 
+    }
+
+
+    //move promotion checks the promotion element, if the element is present there is six speceific moves that can be made, and they dont fit into the RAYS array, 
+    //so I have to process them separately.
+    //as there is no practical reasons to promote to anytnig other than queen or knight I ingnore all other possible promotions.
+    if(move.promotion){
+        if(move.promotion == 'n'){
+            index.promotion = 'n'
+            switch(index.Z){
+                case 0:
+                    index.Z = 65
+                    break;
+                case 28:
+                    index.Z = 67
+                    break;
+                case 42:
+                    index.Z = 69
+                    break;
+            }
+        }else{
+            index.promotion = 'q'
+            switch(index.Z){
+                case 0:
+                    index.Z = 66
+                    break;
+                case 28:
+                    index.Z = 68
+                    break;
+                case 42:
+                    index.Z = 70
+                    break;
+            }
+        }
     }
     // index.X = from.X
     // index.Y = from.Y -1
@@ -412,4 +478,131 @@ parsePosition = function(position){
     temp = position.slice(1)
     index.Y = parseInt(position.slice(1))
     return index
+}
+
+exports.randomiseMoves = async function(legalMoves, range){
+    seed = await tf.randomUniform([1,8,8,73], 0.9, 1.1)
+    return await legalMoves.mul(seed)
+
+
+}
+
+//Reworks the the memory so it can be used to train the model
+exports.normaliseMemory = async function(gameMemory){
+    normalMemory = gameMemory
+    //temporary memory separated by color of the player. It is separated for easier processing.
+    memoryWhite = [];
+    memoryBlack = [];
+    //Assembles the points for player and opponent for each turn
+    playerPoints = [];
+    opponentPoints = [];
+    lastColor = gameMemory[0].color
+    for(i=1; i<gameMemory.length; i++){
+        if(lastColor == gameMemory[i].color){
+            err = "the turn failed at: " + i +", at color: " + gameMemory[i].color
+            console.debug(err)
+        }
+        lastColor = gameMemory[i].color
+    }
+    for(i=0; i<gameMemory.length; i++){
+        points = countPoints(gameMemory[i].board)
+
+        if(gameMemory[i].color == 'w'){
+            temp = {
+                pointsPLayer: points.white,
+                pointsOpponent: points.black,
+
+                input: gameMemory[i].modelInput,
+                output: gameMemory[i].modeloutput,
+                board: gameMemory[i].board
+            }
+            memoryWhite[memoryWhite.length] = temp
+        }else{
+            temp ={
+                pointsPLayer: points.black,
+                pointsOpponent: points.white,
+
+                input: gameMemory[i].modelInput,
+                output: gameMemory[i].modeloutput,
+                board: gameMemory[i].board
+            }
+
+            memoryBlack[memoryBlack.length] = temp
+        }
+    }
+    console.log("memory White")
+    console.log(memoryWhite.length)
+    memoryWhite = calculateReward(memoryWhite);
+    console.log("memory Black")
+    console.log(memoryBlack.length)
+    memoryBlack = calculateReward(memoryBlack);
+
+    memoryWhite = calculateAdjustedOutput(memoryWhite)
+
+
+
+
+
+
+
+
+
+
+
+
+    return normalMemory
+}
+countPoints = function(board){
+    pointsW = 0;
+    pointsB = 0;
+    for(a=0; a<8; a++){
+        for(b=0; b<8; b++){
+            if(board[a][b] === null){
+            }else if(board[a][b].color === 'w'){
+                switch(board[a][b].type){
+                    case PAWN:      pointsW +=1; break 
+                    case ROOK:      pointsW +=3; break
+                    case KNIGHT:    pointsW +=3; break
+                    case BISHOP:    pointsW +=5; break
+                    case QUEEN:     pointsW +=9; break
+                    case KING:      pointsW +=100; break
+                } 
+            }else if(board[a][b].color === 'b'){
+                switch(board[a][b].type){
+                    case PAWN:      pointsB +=1; break 
+                    case ROOK:      pointsB +=3; break
+                    case KNIGHT:    pointsB +=3; break
+                    case BISHOP:    pointsB +=5; break
+                    case QUEEN:     pointsB +=9; break
+                    case KING:      pointsB +=100; break
+                } 
+            }   
+        }
+    }
+
+    return {white: pointsW, black: pointsB}
+}
+
+calculateReward = function(tempMemory){
+    console.log("passed memory")
+    console.log(tempMemory.length)
+    if(tempMemory[tempMemory.length-1].pointsPLayer >=100 && tempMemory[tempMemory.length-1].pointsPLayer >=100){
+        tempMemory[tempMemory.length-1] = 0;
+    }else{
+        tempMemory[tempMemory.length-1].reward = (tempMemory[tempMemory.length-1].pointsPLayer - tempMemory[tempMemory.length-1].pointsOpponent)*0.1
+    }
+
+    for(i=(tempMemory.length-2); i>-1; i--){
+        tempMemory[i].reward = ((tempMemory[i+1].pointsPLayer - tempMemory[i].pointsPLayer) - (tempMemory[i+1].pointsOpponent - tempMemory[i].pointsOpponent))*0.1
+        if(tempMemory[i+1] != undefined ){
+            tempMemory[i].reward += tempMemory[i+1].reward * 0.64;
+        }
+    }
+    return tempMemory
+}
+
+calculateAdjustedOutput = function(memory){
+    for(i = 0; i<memory.length; i++){
+        memory[i].output
+    }
 }

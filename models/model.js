@@ -25,6 +25,7 @@ model.add(denseLayer)
 model.add(denseLayer)
 model.add(denseLayer)
 model.add(outputLayer)
+
 model.add(outputShape)
 
 module.exports = model

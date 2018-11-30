@@ -17,31 +17,52 @@ PlayGame = async function(){
     chess.reset()
     turnCount = 0        
             //take turn
-    while(memory.length<100){
+    while(memory.length<10000){
+        //console.log(chess.ascii())
         board = chess.board() //get board
         color = chess.turn() //get color of the figures moving this turn, b = black, w = white
         modelInput = await utils.toInput(board, color) //convert board to a standart model input
         modelOutput = await model.predict(modelInput) //get model output
         legalMoves = chess.moves({verbose: true}) //get all legal moves
-        legalOutput = await utils.legalise(modelOutput, legalMoves) //zero all illegal moves in model output
-        moveIndex = await utils.findQindex(legalOutput) //get the index of a highes Q value in the legalised output
+        legalOutput = await utils.legalise(modelOutput, legalMoves)//zero all illegal moves in model output
+        randLegalOutput = await utils.randomiseMoves(legalOutput, {min: 0.9, max:1.1})
+
+        moveIndex = await utils.findQindex(randLegalOutput) //get the index of a highes Q value in the legalised output
         moveNotation = utils.indexToMove(moveIndex, color) //convert index to move notation acceptable by chess engine
         results = chess.move(moveNotation); //make a move
-        console.log(results)
-        gameMemory[turnCount]={
+        if(!results){
+
+            console.log("move failed")
+            console.log("move made:")
+            console.log(moveNotation)
+            console.log("possible Moves")
+            for(i=0; i<legalMoves.length; i++){
+                reg = /p/;
+                if(legalMoves[i].flags.match(reg)){
+                    console.log(legalMoves[i])
+                }
+            }
+            err = "failed to make a move"
+            throw err;
+        }
+        gameMemory[gameMemory.length]={
+                                color: color,
                                 board: board,
-                                output: legalOutput,
-                                index: moveIndex
+                                input: modelInput,
+                                output: modelOutput,
+                                index: moveIndex,
                             } //store turn information in game memory
-        console.log(chess.ascii())
-
         if(chess.game_over()){
-
+            normalMemory = await utils.normaliseMemory(gameMemory)
+            memory.push.apply(memory, normalMemory)
             chess.reset()
-            turnCount = 0     
-
+            gameMemory=[]
+            str = "game. memory length:" + memory.length
+            console.log(str)
         }
     }
+
+
 }
         //store data to memory
     //Process memory of this game
@@ -54,3 +75,4 @@ PlayGame = async function(){
 
 
     PlayGame()
+
