@@ -56,8 +56,8 @@ try{
 
 try{
     model.compile({
-        loss: "meanSquaredError",
-        optimizer: tf.train.adam(0.06),
+        //loss: "meanSquaredError",
+        optimizer: tf.train.adagrad(0.06),
     })
 }catch(err){throw(err)}
 // const input = tf.layers.dense({units: 4672, 

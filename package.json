@@ -1,0 +1,28 @@
+{
+  "name": "Chessman",
+  "version": "0.0.1",
+  "description": "Chess environment and Neural networks",
+  "keywords": [
+    "Machine learning",
+    "Chess"
+  ],
+  "scripts": {},
+  "author": "Ivan Trifonov",
+  "dependencies": {
+    "@tensorflow/tfjs": "^0.13.1",
+    "@tensorflow/tfjs-core": "^0.13.2",
+    "@tensorflow/tfjs-node": "^0.1.9",
+    "chess.js": "^0.10.2",
+    "lodash": "^4.17.10",
+    "python": "0.0.4"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=6.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yaz9900/Chessman.git"
+  }
+}
