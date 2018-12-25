@@ -1,5 +1,5 @@
 
-var Chess = require('./node_modules/chess.js').Chess;
+var Chess = require('./chess').Chess;
 var utils = require('./utils')
 const tf = require('@tensorflow/tfjs');
 require('@tensorflow/tfjs-node');
