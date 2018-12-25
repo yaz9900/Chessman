@@ -208,6 +208,7 @@ exports.legalise = async function(modelOutput, legalMoves){
 // finds the index of Highest Q value in the Output array
 exports.findQindex = async function(inputTensor){
     indexOfTensor = []
+    test = await inputTensor.data()
     T1 = await inputTensor.max(0),
     T2 = await T1.max(0),
     T3 = await T2.max(0),
