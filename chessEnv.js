@@ -4,7 +4,9 @@ var utils = require('./utils')
 const tf = require('@tensorflow/tfjs');
 require('@tensorflow/tfjs-node');
 
+
 var model = require('./models/model')
+var config = undefined
 //init loop
 
 var chess = new Chess();
@@ -17,7 +19,7 @@ PlayGame = async function(){
     chess.reset()
     turnCount = 0        
             //take turn
-    while(memory.length<10000){
+    while(memory.length<1000){
         //console.log(chess.ascii())
         board = chess.board() //get board
         color = chess.turn() //get color of the figures moving this turn, b = black, w = white
@@ -35,6 +37,8 @@ PlayGame = async function(){
             console.log("move failed")
             console.log("move made:")
             console.log(moveNotation)
+            console.log('move index: ')
+            console.log(moveIndex)
             console.log("possible Moves")
             for(i=0; i<legalMoves.length; i++){
                 reg = /p/;
@@ -45,28 +49,49 @@ PlayGame = async function(){
             err = "failed to make a move"
             throw err;
         }
+        //store data to memory
         gameMemory[gameMemory.length]={
                                 color: color,
                                 board: board,
                                 input: modelInput,
                                 output: modelOutput,
+                                adjustedOutput: undefined,
                                 index: moveIndex,
                             } //store turn information in game memory
         if(chess.game_over()){
+            //Process memory of this game
             normalMemory = await utils.normaliseMemory(gameMemory)
             memory.push.apply(memory, normalMemory)
             chess.reset()
             gameMemory=[]
-            str = "game. memory length:" + memory.length
+            str = "memory length:" + memory.length
             console.log(str)
         }
     }
+    await teachModel(memory,config)
 
 
 }
-        //store data to memory
-    //Process memory of this game
+
 //Training loop
+teachModel = async function(memory, config){
+    batchSize = 10;
+    memory = utils.shuffle(memory)
+    
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
     //randomise data
     //batch data
     //train on data
